@@ -1,6 +1,6 @@
 # On-Air Door Sign
 
-Turns a physical "On Air" LED sign on and off automatically based on whether you're in a Microsoft Teams call. A background PowerShell script watches the Teams log and toggles a TP-Link Kasa smart plug through TP-Link's cloud API — no Python or external CLI required.
+Turns a physical "On Air" LED sign on and off automatically based on whether you're in a **Microsoft Teams call or a Zoom meeting**. A background PowerShell script watches Teams (via its log) and Zoom (via its meeting processes) and toggles a TP-Link Kasa smart plug through TP-Link's cloud API — no Python or external CLI required. The sign is on whenever you're in *either* a Teams or Zoom call.
 
 ## Quick start
 
@@ -20,7 +20,7 @@ Turns a physical "On Air" LED sign on and off automatically based on whether you
 
 | File | Purpose |
 |---|---|
-| `on-air.ps1` | The watcher: polls the Teams log, toggles the plug |
+| `on-air.ps1` | The watcher: polls the Teams log + Zoom meeting processes, toggles the plug |
 | `on-air.local.ps1.example` | Credentials template (copy to `on-air.local.ps1`) |
 | `register-on-air-task.ps1` | Helper to register a scheduled task for auto-start |
 | `on-air-sign-plan.md` | Full plan, protocol investigation, and setup notes |
@@ -28,7 +28,7 @@ Turns a physical "On Air" LED sign on and off automatically based on whether you
 ## Requirements
 
 - Windows with **PowerShell 7** (`pwsh`) — will not run under Windows PowerShell 5.1
-- Microsoft Teams (new / MSIX client)
+- Microsoft Teams (new / MSIX client) and/or the Zoom desktop client
 - A TP-Link Kasa smart plug + a TP-Link cloud account
 
 ## Notes

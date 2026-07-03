@@ -12,7 +12,7 @@ Detects active Microsoft Teams calls and toggles a physical "On Air" LED sign vi
 ## How it works
 
 1. A PowerShell script (`on-air.ps1`) runs in the background on the PC.
-2. It watches the Teams log file every 8 seconds for call-state changes.
+2. Every 8 seconds it checks whether you're in a call — **Microsoft Teams** (from its log file) or **Zoom** (from its meeting processes). The sign is on whenever *either* says you're in a call.
 3. On call start → turns the Kasa plug ON (sign lights up).
 4. On call end → turns the Kasa plug OFF.
 5. Plug control goes through **TP-Link's cloud API** (passthrough relay) — see below for why local control doesn't work here. Pure PowerShell, no Python/external CLI needed.
@@ -94,6 +94,18 @@ The full script lives at `on-air.ps1` (kept as a file rather than inline here so
    6. Program/script: `pwsh`
    7. Add arguments: `-WindowStyle Hidden -File "<full path to on-air.ps1>"`
    8. Finish
+
+## Zoom detection
+
+Zoom is handled differently from Teams. Its `%APPDATA%\Zoom\logs` folder is typically empty (no reliable, parseable call markers), so instead the script watches for the **meeting-only host processes** that Zoom spawns when you join a meeting:
+
+- An **idle** Zoom client runs only `Zoom.exe`.
+- **Joining a meeting** starts `CptHost.exe` (the conference/share host); `airhost.exe` / `aomhost64.exe` may also appear.
+- As a second, independent signal, a window titled **"Zoom Meeting"** / **"Zoom Webinar"** exists only during a meeting.
+
+`Get-ZoomInCall` returns `$true` if any of those host processes is running *or* a Zoom meeting window is present. This needs no credentials or config — it's purely local process inspection. The main loop ORs it with the Teams state: `inCall = teamsState -or zoomState`.
+
+**Calibration note:** which host process appears for a *plain* audio meeting (no screen share) can vary by Zoom version. This was validated for the "not in a meeting → off" baseline; the "in a meeting → on" transition should be confirmed against a real Zoom test meeting the same way the Teams markers were (watch `on-air.log` for an `ON AIR (teams=False zoom=True)` line when you join). If a plain meeting ever fails to trigger, the "Zoom Meeting" window-title check is the most version-stable fallback.
 
 ## Setting up on another machine
 

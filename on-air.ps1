@@ -133,30 +133,57 @@ function Get-InCallFromLogs([string[]]$logPaths) {
 #region ── Main loop ─────────────────────────────────────────────────────────────
 Write-Log "Started. Plug=$env:KASA_ALIAS PollSecs=$PollSecs"
 
-# Teams rotates its log file every few minutes, so the path is re-resolved every poll
-# instead of once at startup — otherwise this ends up tailing a file Teams stopped
-# writing to, silently going blind to new calls a few minutes after launch.
-$wasInCall = $false
+# Zoom (unlike Teams) doesn't reliably write a parseable log here — its %APPDATA%\Zoom\logs
+# folder is typically empty — so detect a Zoom meeting by its dedicated host processes, which
+# run only WHILE a meeting is active. An idle Zoom client runs just "Zoom.exe"; joining a
+# meeting spawns CptHost.exe (conference/share host). A window titled "Zoom Meeting"/"Zoom
+# Webinar" is an independent second confirmation. Either signal => in a Zoom call; no creds
+# needed. NOTE: which host process appears for a plain (no-share) meeting can vary by Zoom
+# version — calibrate against a real meeting like the Teams markers were (see the plan doc).
+function Get-ZoomInCall {
+    if (Get-Process -Name 'CptHost','airhost','aomhost64' -ErrorAction SilentlyContinue) { return $true }
+    $win = Get-Process -Name 'Zoom' -ErrorAction SilentlyContinue |
+        Where-Object { $_.MainWindowTitle -match '^Zoom (Meeting|Webinar)' }
+    return [bool]$win
+}
+
+# Teams rotates its log file every few minutes, so the Teams path is re-resolved every poll
+# instead of once at startup — otherwise this ends up tailing a file Teams stopped writing
+# to, silently going blind to new calls a few minutes after launch.
+#
+# The sign is ON if in a Teams call OR a Zoom meeting. Teams is log-based and may report
+# $null (= "no marker in the tail, keep last state"); Zoom is process-based and always
+# reports a definite yes/no. Track the last known Teams state separately, then OR the two.
+$wasInCall   = $false
+$teamsState  = $false
 $lastLogSeen = $null
 while ($true) {
+    # --- Teams (log-based) ---
     $logs = Find-TeamsLogs
     $newest = if ($logs.Count -gt 0) { $logs[-1] } else { $null }
     if ($newest -and $newest -ne $lastLogSeen) {
-        Write-Log "Watching log: $newest"
+        Write-Log "Watching Teams log: $newest"
         $lastLogSeen = $newest
     }
     if ($logs.Count -gt 0) {
-        $inCall = Get-InCallFromLogs $logs
-        if ($null -ne $inCall -and $inCall -ne $wasInCall) {
-            Write-Log $(if ($inCall) { 'ON AIR' } else { 'off' })
-            Set-KasaPlug -on $inCall
-            $wasInCall = $inCall
-        }
+        $t = Get-InCallFromLogs $logs
+        if ($null -ne $t) { $teamsState = $t }   # $null = keep last state (marker scrolled out of tail)
     } elseif ($lastLogSeen) {
-        # Only log the transition into "no log", not every poll — Teams being
-        # closed for hours shouldn't fill this file with repeats.
+        # Teams fully closed (no log at all) — can't be in a Teams call. Log the transition once.
         Write-Log "No Teams log found — waiting for Teams to start."
         $lastLogSeen = $null
+        $teamsState  = $false
+    }
+
+    # --- Zoom (process-based) ---
+    $zoomState = Get-ZoomInCall
+
+    # --- Combine: sign ON if in a Teams call OR a Zoom meeting ---
+    $inCall = $teamsState -or $zoomState
+    if ($inCall -ne $wasInCall) {
+        Write-Log ("{0}  (teams={1} zoom={2})" -f $(if ($inCall) { 'ON AIR' } else { 'off' }), $teamsState, $zoomState)
+        Set-KasaPlug -on $inCall
+        $wasInCall = $inCall
     }
     Start-Sleep -Seconds $PollSecs
 }
