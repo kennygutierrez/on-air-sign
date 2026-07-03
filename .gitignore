@@ -1,0 +1,6 @@
+# Secrets — TP-Link account email/password live here. NEVER commit this file.
+# Recreate it from on-air.local.ps1.example on each machine.
+on-air.local.ps1
+
+# Runtime log written by on-air.ps1 (not source)
+on-air.log

@@ -1,0 +1,6 @@
+# Copy this file to on-air.local.ps1 (gitignored) and fill in real values.
+# on-air.ps1 dot-sources on-air.local.ps1 if it exists.
+
+$env:KASA_USERNAME = "your-tplink-account-email@example.com"
+$env:KASA_PASSWORD = "your-tplink-account-password"
+$env:KASA_ALIAS    = "On Air Lamp"   # must match the device's alias/name in the Kasa app exactly
