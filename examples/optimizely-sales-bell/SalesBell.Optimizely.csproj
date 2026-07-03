@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Standalone, drop-in sample. It depends ONLY on public Optimizely + Microsoft
+    NuGet packages — nothing from any particular site or codebase. Copy these
+    files into any Optimizely Customized Commerce (CMS 12) solution and they work.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>SalesBellSample</RootNamespace>
+  </PropertyGroup>
+
+  <!-- ASP.NET Core shared framework: Hosting, DI, Options, Logging, Http, Caching, Configuration. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- Optimizely Customized Commerce — brings EPiServer.Commerce.Order (IOrderEvents, IPurchaseOrder). -->
+  <ItemGroup>
+    <PackageReference Include="EPiServer.Commerce.Core" Version="*" />
+  </ItemGroup>
+
+</Project>
