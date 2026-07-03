@@ -105,7 +105,7 @@ Zoom is handled differently from Teams. Its `%APPDATA%\Zoom\logs` folder is typi
 
 `Get-ZoomInCall` returns `$true` if any of those host processes is running *or* a Zoom meeting window is present. This needs no credentials or config — it's purely local process inspection. The main loop ORs it with the Teams state: `inCall = teamsState -or zoomState`.
 
-**Calibration note:** which host process appears for a *plain* audio meeting (no screen share) can vary by Zoom version. This was validated for the "not in a meeting → off" baseline; the "in a meeting → on" transition should be confirmed against a real Zoom test meeting the same way the Teams markers were (watch `on-air.log` for an `ON AIR (teams=False zoom=True)` line when you join). If a plain meeting ever fails to trigger, the "Zoom Meeting" window-title check is the most version-stable fallback.
+**Calibrated 2026-07-03 against a real meeting.** A live "New Meeting" was watched end-to-end: `CptHost.exe` and `aomhost64.exe` were present for the *entire* meeting and `Get-ZoomInCall` stayed `True` throughout; the watcher logged `ON AIR (teams=False zoom=True)` on join and `off` on leave, with the physical sign following in sync. Notably the **"Zoom Meeting" window title flickered** (some samples showed only "Zoom Workplace"), so the **process signal is the reliable one** — the window-title check is only a secondary fallback. Which host process appears may still vary by Zoom version; if a plain meeting ever fails to trigger, re-check with a probe (sample `Get-Process` for `zoom|CptHost|airhost|aomhost` while in a meeting) and adjust the process list.
 
 ## Setting up on another machine
 
