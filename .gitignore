@@ -4,3 +4,6 @@ on-air.local.ps1
 
 # Runtime log written by on-air.ps1 (not source)
 on-air.log
+
+# Timestamped rollback backups (e.g. on-air.ps1.bak-2026-07-21)
+*.bak-*
