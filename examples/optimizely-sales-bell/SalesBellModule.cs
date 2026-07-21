@@ -35,9 +35,10 @@ public sealed class SalesBellModule : IConfigurableModule
         services.AddSingleton<SalesBellOrderListener>();
     }
 
+    // InitializationEngine has no .Services — resolve through Locate.Advanced.
     public void Initialize(InitializationEngine context)
-        => context.Services.GetInstance<SalesBellOrderListener>().Subscribe();
+        => context.Locate.Advanced.GetInstance<SalesBellOrderListener>().Subscribe();
 
     public void Uninitialize(InitializationEngine context)
-        => context.Services.GetInstance<SalesBellOrderListener>().Unsubscribe();
+        => context.Locate.Advanced.GetInstance<SalesBellOrderListener>().Unsubscribe();
 }
