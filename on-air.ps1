@@ -106,10 +106,10 @@ function Get-InCallFromLogs([string[]]$logPaths) {
     #
     # $logPaths is oldest-first, so concatenating tails preserves chronological order and
     # "last marker across all of them" is still the true last marker even across a rotation.
-    $tail = @()
-    foreach ($p in $logPaths) {
-        $tail += Get-Content $p -Tail 5000 -ErrorAction SilentlyContinue
-    }
+    #
+    # Reads the last 2 MB of each file as raw text (~5000+ lines at ~300 bytes/line) instead of
+    # Get-Content -Tail 5000, which took ~3 s per poll and kept a CPU core near 100%.
+    $tail = ($logPaths | ForEach-Object { Read-LogTail $_ 2MB }) -join "`n"
     if (-not $tail) { return $null }
 
     # Calibrated 2026-07-03 against a real Teams test call. TeamsCallTracker is a dedicated
@@ -120,13 +120,24 @@ function Get-InCallFromLogs([string[]]$logPaths) {
     $onPattern  = 'TeamsCallTracker: Call became active'
     $offPattern = 'TeamsCallTracker: Call ended'
 
-    $last = $tail | Where-Object { $_ -match $onPattern -or $_ -match $offPattern } |
-            Select-Object -Last 1
+    $lastOn  = $tail.LastIndexOf($onPattern,  [StringComparison]::Ordinal)
+    $lastOff = $tail.LastIndexOf($offPattern, [StringComparison]::Ordinal)
 
     # $null (not $false) when neither file has any markers at all — the caller keeps the
     # last known state until a real marker shows up, rather than guessing "off".
-    if (-not $last)  { return $null }
-    return ($last -match $onPattern) -and ($last -notmatch $offPattern)
+    if ($lastOn -lt 0 -and $lastOff -lt 0) { return $null }
+    return $lastOn -gt $lastOff
+}
+
+function Read-LogTail([string]$path, [long]$bytes) {
+    # Teams holds the log open for writing, so open with ReadWrite sharing.
+    try {
+        $fs = [System.IO.File]::Open($path, 'Open', 'Read', 'ReadWrite, Delete')
+    } catch { return '' }
+    try {
+        [void]$fs.Seek([math]::Max(0, $fs.Length - $bytes), 'Begin')
+        return (New-Object System.IO.StreamReader($fs)).ReadToEnd()
+    } finally { $fs.Dispose() }
 }
 #endregion
 
